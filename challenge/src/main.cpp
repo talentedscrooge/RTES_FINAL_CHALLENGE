@@ -78,14 +78,14 @@ float32_t manualFFT(float32_t fft_input[FFT_SIZE])
                 }
                 else
                 {
-                    output += fft_input[i] * fft_output[j];
+                    output -= fft_input[i] * fft_output[j];
                 }
             }
             else
             {
                 if(j % 2 == 0)
                 {
-                    output += fft_input[i] * fft_output[j];
+                    output -= fft_input[i] * fft_output[j];
                 }
                 else
                 {
@@ -165,7 +165,8 @@ int main()
         // printf("Actual -> \t\tgx: %4.5f \t gy: %4.5f \t gz: %4.5f \t\n", gx, gy, gz);
 
         // Use one of the axes (e.g., gx) for FFT analysis
-        fft_input[fft_index++] = sqrt(gx * gx + gy * gy + gz * gz); // Real part
+        fft_input[++fft_index] = sqrt(gx * gx + gy * gy + gz * gz); // Real part
+        printf("fft ip - %f\n", fft_input[fft_index]);-
         // //draw_smile();
 
         sample_count++;
