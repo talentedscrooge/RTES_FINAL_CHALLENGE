@@ -20,7 +20,7 @@ void spi_cb(int event)
 #define SCALING_FACTOR (17.5f * 0.0174532925199432957692236907684886f / 1000.0f)
 
 // FFT specific definitions
-#define FFT_SIZE 256
+#define FFT_SIZE 64
 #define SAMPLE_FREQUENCY 100  // Adjust based on your actual sampling rate
 
 float32_t fft_input[FFT_SIZE]; // Complex buffer: real and imaginary parts
@@ -61,10 +61,48 @@ void draw_exclaim() {
     //lcd.SetBackColor(LCD_COLOR_YELLOW);
 }
 
+float32_t manualFFT(float32_t fft_input[FFT_SIZE])
+{
+    float32_t output = 0;
+    printf("output 0 - %f\n", output);
+    int i, j;
+    for(i = 0; i < FFT_SIZE; i++)
+    {
+        for(j = 0; j < FFT_SIZE; j++)
+        {
+            if(i % 2 == 0)
+            {
+                if(j % 2 == 0)
+                {
+                    output += fft_input[i] * fft_output[j];
+                }
+                else
+                {
+                    output += fft_input[i] * fft_output[j];
+                }
+            }
+            else
+            {
+                if(j % 2 == 0)
+                {
+                    output += fft_input[i] * fft_output[j];
+                }
+                else
+                {
+                    output += fft_input[i] * fft_output[j];
+                }
+            }
+        }
+    }
+    printf("%f\n", output);
+    return output;
+}
+
 int main()
 {
-    draw_exclaim();
-    //draw_smile();
+    printf("main start\n");
+    // draw_exclaim();
+    draw_smile();
     // Buffers for sending and receiving data over SPI.
     uint8_t write_buf[32], read_buf[32];
 
@@ -101,7 +139,7 @@ int main()
         uint16_t raw_gx, raw_gy, raw_gz;
         float gx, gy, gz;
     
-        
+        // printf("loop %d start\n", fft_index);
 
         // Prepare to read the gyroscope values starting from OUT_X_L
         write_buf[0] = OUT_X_L | 0x80 | 0x40;
@@ -116,7 +154,7 @@ int main()
         raw_gz = (((uint16_t)read_buf[6]) << 8) | ((uint16_t) read_buf[5]);
 
         // Print the raw values for debugging 
-        printf("RAW -> \t\tgx: %d \t gy: %d \t gz: %d \t\n", raw_gx, raw_gy, raw_gz);
+        // printf("RAW -> \t\tgx: %d \t gy: %d \t gz: %d \t\n", raw_gx, raw_gy, raw_gz);
 
         // Convert raw data to actual values using a scaling factor
         gx = ((float) raw_gx) * SCALING_FACTOR;
@@ -124,49 +162,76 @@ int main()
         gz = ((float) raw_gz) * SCALING_FACTOR;
 
         // Print the actual values
-        printf("Actual -> \t\tgx: %4.5f \t gy: %4.5f \t gz: %4.5f \t\n", gx, gy, gz);
+        // printf("Actual -> \t\tgx: %4.5f \t gy: %4.5f \t gz: %4.5f \t\n", gx, gy, gz);
 
-        // // Use one of the axes (e.g., gx) for FFT analysis
-        // fft_input[fft_index++] = gx; // Real part
+        // Use one of the axes (e.g., gx) for FFT analysis
+        fft_input[fft_index++] = sqrt(gx * gx + gy * gy + gz * gz); // Real part
         // //draw_smile();
 
-        // // Perform FFT on the collected data
-        // arm_rfft_fast_f32(&s, fft_input, fft_output, 0);
+        sample_count++;
+        // Reset for next FFT processing
+        if(sample_count >= FFT_SIZE){
+            printf("b4 fft\n");
+            // // Perform FFT on the collected data
+            // arm_rfft_fast_f32(&s, fft_input, fft_output, 0);
 
-        // // Compute magnitude of the FFT results
-        // for (int i = 0; i <= FFT_SIZE / 2; i++) {
-        //     float real = fft_output[2*i];
-        //     float imag = fft_output[2*i +1];
-        //     float magn_squared = real*real + imag*imag;
-        //     arm_sqrt_f32(magn_squared, &magnitudes[i]);
-        //     magnitudes[i] /= FFT_SIZE; 
+            float32_t frequency = manualFFT(fft_input);
 
-        // }
+            printf("fft init\n");
 
-        // // Determine frequency resolution
-        // float frequency_resolution = (float)SAMPLE_FREQUENCY / (float)FFT_SIZE;
+            // // Compute magnitude of the FFT results
+            // for (int i = 0; i <= FFT_SIZE / 2; i++) {
+            //     float real = fft_output[2*i];
+            //     float imag = fft_output[2*i +1];
+            //     float magn_squared = real*real + imag*imag;
+            //     arm_sqrt_f32(magn_squared, &magnitudes[i]);
+            //     magnitudes[i] /= FFT_SIZE; 
 
-        // for (int i = 0; i <= FFT_SIZE / 2; i++) {
-        //     float frequency = i * frequency_resolution;
-        //     // Process the frequencies of interest (3 Hz to 6 Hz)
-        //     if (frequency >= 3.0f && frequency <= 6.0f)
-        //     {
-        //         if (magnitudes[i] > 0.5)
-        //         {
-        //         draw_exclaim();}
-        //     }
-        //     else{
-        //         draw_smile();
-        //     }
-        // }    
+            // }
 
-        // sample_count++;
-        // // Reset for next FFT processing
-        // if(sample_count >= FFT_SIZE){
-        //     sample_count = 0;
-        //     fft_index = 0;
-        // }
+            // printf("got mag\n");
+
+            // // Determine frequency resolution
+            // float frequency_resolution = (float)SAMPLE_FREQUENCY / (float)FFT_SIZE;
+
+            // printf("freq res\n");
+
+            // for (int i = 0; i <= FFT_SIZE / 2; i++) {
+            //     float frequency = i * frequency_resolution;
+            //     // Process the frequencies of interest (3 Hz to 6 Hz)
+            //     if (frequency >= 3.0f && frequency <= 6.0f)
+            //     {
+            //         if (magnitudes[i] > 0.5)
+            //         {
+            //             draw_exclaim();
+            //         }
+            //     }
+            //     else{
+            //         draw_smile();
+            //     }
+            // }    
+
         
-        // thread_sleep_for(1000 / SAMPLE_FREQUENCY);
+
+            if (frequency >= 3.0f && frequency <= 6.0f)
+            {
+                draw_exclaim();
+            }
+            else if (frequency <= -3.0f && frequency >= -6.0f)
+            {
+                draw_exclaim();
+            }
+            else
+            {
+                draw_smile();
+            }
+
+            printf("drawing done - freq = %f\n", frequency);
+
+            sample_count = 0;
+            fft_index = 0;
+        }
+        
+        thread_sleep_for(1000 / SAMPLE_FREQUENCY);
     }
 }
